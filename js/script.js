@@ -99,12 +99,17 @@ class PlayGame extends Phaser.Scene{
         });
 
         
-        
+        //create bullets
         this.bullets=this.physics.add.group({
             defaultKey: "star",
         });
-        this.physics.add.collider(this.bullets, layer);
+        
+        this.physics.add.collider(this.bullets, layer, (bullet, layer)=>{
+            bullet.setActive(false);
+            bullet.setVisible(false);
+            bullet.body.enable = false;
 
+        });
 
     }
 
@@ -145,20 +150,40 @@ class PlayGame extends Phaser.Scene{
 
     shootBullet(x, y){
         let bullet = this.bullets.get(this.dude.x, this.dude.y);
+        
         if(bullet){
+            bullet.body.enable = true;
             bullet.setActive(true);
             bullet.setVisible(true);
-
             
+            const hitboxRadius = 10; 
+            bullet.body.setCircle(hitboxRadius);
+
+            const offsetX = 2; // Adjust as necessary
+            const offsetY = 3; // Adjust as necessary
+            bullet.body.setOffset(offsetX, offsetY);
+
+
             const spreadX = Phaser.Math.FloatBetween(-gameOptions.bulletSpread, gameOptions.bulletSpread);
             const spreadY = Phaser.Math.FloatBetween(-gameOptions.bulletSpread, gameOptions.bulletSpread);
 
-            bullet.body.velocity.x = (x + spreadX) * gameOptions.bulletSpeed + this.dude.body.velocity.x;
-            bullet.body.velocity.y = (y + spreadY) * gameOptions.bulletSpeed + this.dude.body.velocity.y;
-        }
+            const magnitude = Math.sqrt(x * x + y * y);
+            
+            x = x / magnitude;
+            y = y / magnitude;
+
+            const directionX = x + spreadX + (this.dude.body.velocity.x / gameOptions.bulletSpeed);
+            const directionY = y + spreadY + (this.dude.body.velocity.y / gameOptions.bulletSpeed);
+            const directionMagnitude = Math.sqrt(directionX * directionX + directionY * directionY);
+
+            
+            bullet.body.velocity.x = (directionX / directionMagnitude) * gameOptions.bulletSpeed;
+            bullet.body.velocity.y = (directionY / directionMagnitude) * gameOptions.bulletSpeed;
+         }
         
         this.time.delayedCall(gameOptions.bulletRange, ()=>{
             bullet.body.setGravityY(gameOptions.bulletGravity);
+
         }, null, this);
 
         
