@@ -28,7 +28,8 @@ window.onload = function() {
         physics: {
             default: 'arcade',
             arcade: {
-                gravity: {y: 0}
+                gravity: {y: 0},
+                debug: true
             }
         },
         pixelArt: true,
@@ -56,30 +57,32 @@ class PlayGame extends Phaser.Scene{
         this.load.image("star", "assets/star.png");
         
         this.load.image("tiles", "assets/tiles.png");
-        this.load.tilemapTiledJSON("Floor1", "assets/Floor1.json");
+        this.load.tilemapTiledJSON("cave", "assets/cave.json");
         
     }
 
     create(){
-
-        
-
-        const map = this.make.tilemap({key: "Floor1"});
-        const tileset = map.addTilesetImage("floor", "tiles");
-
-    
-        const layer = map.createLayer("Tile Layer 1", tileset, 0, 0);
-
-        const offsetX = (this.game.config.width - map.widthInPixels) / 2;
-        const offsetY = (this.game.config.height - map.heightInPixels) / 2;
-
-        
-        layer.setPosition(offsetX, offsetY);
-
-        this.dude = this.physics.add.sprite(game.config.width / 2, game.config.height / 2, "dude");
-        this.dude.setFrame(4);
+        //init create
         this.lastShot = 0;
 
+        //create map
+        const map = this.make.tilemap({key: "cave"});
+        const tileset = map.addTilesetImage("cave", "tiles");
+        const layer = map.createLayer("Tile Layer 1", tileset, 0, 0);
+        layer.setCollisionByProperty({collides: true});
+        const offsetX = (this.game.config.width - map.widthInPixels) / 2;
+        const offsetY = (this.game.config.height - map.heightInPixels) / 2; 
+        layer.setPosition(offsetX, offsetY);
+
+        //create player
+        this.dude = this.physics.add.sprite(game.config.width / 2, game.config.height / 2, "dude");
+        this.dude.setFrame(4);
+        const hitboxRadius = 16;
+        this.dude.body.setCircle(hitboxRadius);
+        this.dude.body.setOffset((this.dude.width - hitboxRadius * 2) / 2, (this.dude.height - hitboxRadius * 2) / 2);
+        this.dude.body.drag.set(1000);
+        this.physics.add.collider(this.dude, layer);
+        
         //define keys
         this.keys = this.input.keyboard.addKeys({
 
@@ -95,15 +98,19 @@ class PlayGame extends Phaser.Scene{
 
         });
 
+        
+        
         this.bullets=this.physics.add.group({
             defaultKey: "star",
         });
+        this.physics.add.collider(this.bullets, layer);
+
 
     }
 
     update(time){
 
-        this.dude.body.setVelocity(0); 
+        //this.dude.body.setVelocity(0); 
         
 
         //movement
