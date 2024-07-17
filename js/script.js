@@ -8,7 +8,7 @@ const gameOptions = {
     shotDelay: 300,
     bulletGravity: 400,
     bulletSpeed: 400,
-    bulletRange: 300,
+    bulletRange: 400,
     bulletSpread: 0.2
 }
 
@@ -53,9 +53,10 @@ class PlayGame extends Phaser.Scene{
     }
 
     preload(){
+        
         this.load.spritesheet('dude', 'assets/dude.png', {frameWidth: 32, frameHeight: 48});
         this.load.image("star", "assets/star.png");
-        
+        this.load.image("enemy", "assets/boy.png");
         this.load.image("tiles", "assets/tiles.png");
         this.load.tilemapTiledJSON("cave", "assets/cave.json");
         
@@ -83,6 +84,9 @@ class PlayGame extends Phaser.Scene{
         this.dude.body.drag.set(1000);
         this.physics.add.collider(this.dude, layer);
         
+        //create enemies
+        this.enemy = new Enemy(this, 500, 500);
+
         //define keys
         this.keys = this.input.keyboard.addKeys({
 
@@ -111,12 +115,20 @@ class PlayGame extends Phaser.Scene{
 
         });
 
+        this.physics.add.collider(this.bullets, this.enemy, (enemy, bullet)=>{
+            bullet.setActive(false);
+            bullet.setVisible(false);
+            bullet.body.enable = false;
+            enemy.takeDamage();
+        });
     }
 
     update(time){
 
         //this.dude.body.setVelocity(0); 
         
+        
+        this.enemy.updateEnemy(this.dude, time);
 
         //movement
         if(this.keys.left.isDown){
