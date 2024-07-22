@@ -8,6 +8,7 @@ class Enemy extends Phaser.GameObjects.Sprite {
         this.body.setCircle(radius);
         this.body.setOffset(90, 80);
 
+        this.health = 100;  
         this.speed = 10; 
         this.scale = 0.5; 
         this.stepSize = 64; 
@@ -24,7 +25,7 @@ class Enemy extends Phaser.GameObjects.Sprite {
 
             let distance = Math.sqrt(dx * dx + dy * dy);
 
-            if (distance > this.stepSize) {
+          
                 let normalizedX = dx / distance;
                 let normalizedY = dy / distance;
 
@@ -34,7 +35,7 @@ class Enemy extends Phaser.GameObjects.Sprite {
 
                 // Reset the next step time immediately
                 this.nextStepTime = time + this.stepDelay;
-            }
+            
         }
 
         // Interpolate position towards the target position for fluid movement
@@ -42,7 +43,20 @@ class Enemy extends Phaser.GameObjects.Sprite {
         this.y += (this.targetY - this.y) * 0.02;
     }
 
-    takeDamage() {
-        this.destroy();
+    takeDamage(damage) {
+
+        this.setTint(0xff0000);
+
+        this.scene.time.delayedCall(100, () => {
+            this.clearTint();
+        }); 
+        this.health -= damage;
+        if (this.health <= 0) {
+            this.destroy();
+        }   
+        
+       
+
+
     }
 }

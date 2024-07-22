@@ -4,12 +4,14 @@ const gameOptions = {
     gravity: 300,
     
     dudeSpeed: 200,
-    
+    dudeHealth: 3,    
+
     shotDelay: 300,
     bulletGravity: 400,
     bulletSpeed: 400,
     bulletRange: 400,
-    bulletSpread: 0.2
+    bulletSpread: 0.2,
+    damage: 10
 }
 
 window.onload = function() {
@@ -50,6 +52,7 @@ class PlayGame extends Phaser.Scene{
     constructor(){
         super("PlayGame");
         this.lastShot = 0;
+        this.isKnocked = false;
     }
 
     preload(){
@@ -71,6 +74,9 @@ class PlayGame extends Phaser.Scene{
         const tileset = map.addTilesetImage("cave", "tiles");
         const layer = map.createLayer("Tile Layer 1", tileset, 0, 0);
         layer.setCollisionByProperty({collides: true});
+        
+
+        
         const offsetX = (this.game.config.width - map.widthInPixels) / 2;
         const offsetY = (this.game.config.height - map.heightInPixels) / 2; 
         layer.setPosition(offsetX, offsetY);
@@ -119,7 +125,12 @@ class PlayGame extends Phaser.Scene{
             bullet.setActive(false);
             bullet.setVisible(false);
             bullet.body.enable = false;
-            enemy.takeDamage();
+            enemy.takeDamage(gameOptions.damage);
+        });
+
+
+        this.physics.add.collider(this.enemy, this.dude, (enemy, dude)=>{
+            this.dudeTakeDamage();
         });
     }
 
@@ -131,17 +142,21 @@ class PlayGame extends Phaser.Scene{
         this.enemy.updateEnemy(this.dude, time);
 
         //movement
-        if(this.keys.left.isDown){
-            this.dude.body.setVelocityX(-gameOptions.dudeSpeed);
-        } else if(this.keys.right.isDown){
-            this.dude.body.setVelocityX(gameOptions.dudeSpeed);
+        
+        if(!this.isKnocked){
+            if(this.keys.left.isDown){
+                this.dude.body.setVelocityX(-gameOptions.dudeSpeed);
+            } else if(this.keys.right.isDown){
+                this.dude.body.setVelocityX(gameOptions.dudeSpeed);
+            }
+            if(this.keys.up.isDown){
+                this.dude.body.setVelocityY(-gameOptions.dudeSpeed);
+            } else if(this.keys.down.isDown){
+                this.dude.body.setVelocityY(gameOptions.dudeSpeed);
+            }
+    
         }
-        if(this.keys.up.isDown){
-            this.dude.body.setVelocityY(-gameOptions.dudeSpeed);
-        } else if(this.keys.down.isDown){
-            this.dude.body.setVelocityY(gameOptions.dudeSpeed);
-        }
-
+        
         //shooting
         if((time- this.lastShot) > gameOptions.shotDelay){
             if(this.keys.shootLeft.isDown){
@@ -201,5 +216,31 @@ class PlayGame extends Phaser.Scene{
         
     }
 
+
+    dudeTakeDamage(){
+
+        this.dude.dudeHealth -= 1;
+        
+        let knockbackDirectionX = this.dude.x - this.enemy.x;
+        let knockbackDirectionY = this.dude.y - this.enemy.y;
+        let magnitude = Math.sqrt(knockbackDirectionX * knockbackDirectionX + knockbackDirectionY * knockbackDirectionY);
+        
+        
+        knockbackDirectionX /= magnitude; 
+        knockbackDirectionY /= magnitude; 
+            
+        let knockbackForce = 400; 
+        this.dude.body.velocity.x = knockbackDirectionX * knockbackForce;
+        this.dude.body.velocity.y = knockbackDirectionY * knockbackForce;
+        
+        this.dude.setTint(0xff0000);
+        this.isKnocked = true;
+        this.time.delayedCall(200, ()=>{
+            this.dude.clearTint();
+            this.isKnocked = false;
+        });
+
+
+    }
 }
 
