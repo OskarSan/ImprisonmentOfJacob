@@ -53,6 +53,9 @@ class PlayGame extends Phaser.Scene{
         super("PlayGame");
         this.lastShot = 0;
         this.isKnocked = false;
+        this.mapChanged = false; 
+        this.layer = null;
+        this.map = null;
     }
 
     preload(){
@@ -60,8 +63,9 @@ class PlayGame extends Phaser.Scene{
         this.load.spritesheet('dude', 'assets/dude.png', {frameWidth: 32, frameHeight: 48});
         this.load.image("star", "assets/star.png");
         this.load.image("enemy", "assets/boy.png");
-        this.load.image("tiles", "assets/tiles.png");
+        this.load.image("map", "assets/map.png");
         this.load.tilemapTiledJSON("cave", "assets/cave.json");
+        this.load.tilemapTiledJSON("caveClosed", "assets/caveClosed.json");
         
     }
 
@@ -70,16 +74,21 @@ class PlayGame extends Phaser.Scene{
         this.lastShot = 0;
 
         //create map
-        const map = this.make.tilemap({key: "cave"});
-        const tileset = map.addTilesetImage("cave", "tiles");
-        const layer = map.createLayer("Tile Layer 1", tileset, 0, 0);
-        layer.setCollisionByProperty({collides: true});
-        
 
+        this.setMap("caveClosed")
+        
+        /*
+        const map = this.make.tilemap({key: "caveClosed"});
+        const tileset = map.addTilesetImage("caveClosed", "map");
+        this.layer = map.createLayer("Tile Layer 1", tileset, 0, 0);
+        this.layer.setCollisionByProperty({collides: true});
+        
         
         const offsetX = (this.game.config.width - map.widthInPixels) / 2;
         const offsetY = (this.game.config.height - map.heightInPixels) / 2; 
-        layer.setPosition(offsetX, offsetY);
+        this.layer.setPosition(offsetX, offsetY);
+        */
+
 
         //create player
         this.dude = this.physics.add.sprite(game.config.width / 2, game.config.height / 2, "dude");
@@ -88,11 +97,19 @@ class PlayGame extends Phaser.Scene{
         this.dude.body.setCircle(hitboxRadius);
         this.dude.body.setOffset((this.dude.width - hitboxRadius * 2) / 2, (this.dude.height - hitboxRadius * 2) / 2);
         this.dude.body.drag.set(1000);
-        this.physics.add.collider(this.dude, layer);
+        this.physics.add.collider(this.dude, this.layer);
+        
         
         //create enemies
-        this.enemy = new Enemy(this, 500, 500);
+        this.enemies = this.physics.add.group();
+        for (let i = 0; i < 2; i++) {
+            let enemy = new Enemy(this, Phaser.Math.Between(0, game.config.width), Phaser.Math.Between(0, game.config.height)); // Adjust position as needed
+            this.enemies.add(enemy);
+        }
 
+        // Add collider between the player and each enemy
+       
+        
         //define keys
         this.keys = this.input.keyboard.addKeys({
 
@@ -114,24 +131,30 @@ class PlayGame extends Phaser.Scene{
             defaultKey: "star",
         });
         
-        this.physics.add.collider(this.bullets, layer, (bullet, layer)=>{
+        this.physics.add.collider(this.bullets, this.layer, (bullet, layer)=>{
             bullet.setActive(false);
             bullet.setVisible(false);
             bullet.body.enable = false;
 
         });
 
-        this.physics.add.collider(this.bullets, this.enemy, (enemy, bullet)=>{
-            bullet.setActive(false);
-            bullet.setVisible(false);
-            bullet.body.enable = false;
-            enemy.takeDamage(gameOptions.damage);
+        this.physics.add.collider(this.bullets, this.enemies, (bullet, enemy)=>{
+            if (enemy.active) { // Check if the enemy is active before interacting
+                bullet.setActive(false);
+                bullet.setVisible(false);
+                bullet.body.enable = false;
+                enemy.takeDamage(gameOptions.damage);
+            }
         });
 
-
-        this.physics.add.collider(this.enemy, this.dude, (enemy, dude)=>{
-            this.dudeTakeDamage();
+        this.enemies.getChildren().forEach(enemy => {
+            this.physics.add.collider(enemy, this.dude, (enemy, dude)=>{
+                this.dudeTakeDamage(enemy);
+            });
+        
         });
+        
+      
     }
 
     update(time){
@@ -139,8 +162,11 @@ class PlayGame extends Phaser.Scene{
         //this.dude.body.setVelocity(0); 
         
         
-        this.enemy.updateEnemy(this.dude, time);
-
+        this.enemies.getChildren().forEach(enemy => {
+            enemy.updateEnemy(this.dude, time);
+        });
+        
+        
         //movement
         
         if(!this.isKnocked){
@@ -172,6 +198,12 @@ class PlayGame extends Phaser.Scene{
                 this.shootBullet(0, 1);
                 this.lastShot = time;
             }
+        }
+        
+        if(this.enemies.getChildren().length === 0 && !this.mapChanged){
+            this.setMap("cave");
+            this.mapChanged = true; // Step 3: Set the flag to true after changing the map
+            console.log("map changed");
         }
     }    
 
@@ -217,12 +249,12 @@ class PlayGame extends Phaser.Scene{
     }
 
 
-    dudeTakeDamage(){
+    dudeTakeDamage(enemy){
 
         this.dude.dudeHealth -= 1;
         
-        let knockbackDirectionX = this.dude.x - this.enemy.x;
-        let knockbackDirectionY = this.dude.y - this.enemy.y;
+        let knockbackDirectionX = this.dude.x - enemy.x;
+        let knockbackDirectionY = this.dude.y - enemy.y;
         let magnitude = Math.sqrt(knockbackDirectionX * knockbackDirectionX + knockbackDirectionY * knockbackDirectionY);
         
         
@@ -241,6 +273,36 @@ class PlayGame extends Phaser.Scene{
         });
 
 
+    }
+
+    setMap(mapKey){
+
+        
+        if(this.layer !== null){
+        this.layer.setVisible(false);
+        this.layer.setCollisionByExclusion([-1], false);
+        }
+
+        const newMapKey = mapKey; // Assuming you want to change to the "cave" map
+        this.map = this.make.tilemap({key: newMapKey});
+        const tileset = this.map.addTilesetImage(newMapKey, "map");
+       
+        this.layer = this.map.createLayer("Tile Layer "+ mapKey, tileset, 0, 0);
+        this.layer.setCollisionByProperty({collides: true});
+
+        const offsetX = (this.game.config.width - this.map.widthInPixels) / 2;
+        const offsetY = (this.game.config.height - this.map.heightInPixels) / 2; 
+        this.layer.setPosition(offsetX, offsetY);
+        
+        // Adjust player and other game objects as needed for the new map
+        // For example, reposition the player
+
+        if(this.dude){
+            this.dude.setDepth(this.layer.depth + 1);
+        }
+        if(this.dude && this.layer){
+            this.physics.add.collider(this.dude, this.layer);
+        }
     }
 }
 

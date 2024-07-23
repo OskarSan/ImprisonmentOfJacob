@@ -8,7 +8,7 @@ class Enemy extends Phaser.GameObjects.Sprite {
         this.body.setCircle(radius);
         this.body.setOffset(90, 80);
 
-        this.health = 100;  
+        this.health = 10;  
         this.speed = 10; 
         this.scale = 0.5; 
         this.stepSize = 64; 
@@ -53,6 +53,7 @@ class Enemy extends Phaser.GameObjects.Sprite {
         this.health -= damage;
         if (this.health <= 0) {
             this.destroy();
+
         }   
         
        
