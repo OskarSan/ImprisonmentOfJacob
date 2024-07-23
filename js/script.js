@@ -19,7 +19,6 @@ window.onload = function() {
     let gameConfig ={
         type: Phaser.AUTO,
         backgroundColor: "#050505",
-        
         scale :  {
         
             mode: Phaser.Scale.FIT,
@@ -53,9 +52,11 @@ class PlayGame extends Phaser.Scene{
         super("PlayGame");
         this.lastShot = 0;
         this.isKnocked = false;
-        this.mapChanged = false; 
+        this.roomCleared = true;
+        this.gameStarted = false; 
         this.layer = null;
         this.map = null;
+        this.currentMapName = "start";
     }
 
     preload(){
@@ -66,7 +67,8 @@ class PlayGame extends Phaser.Scene{
         this.load.image("map", "assets/map.png");
         this.load.tilemapTiledJSON("cave", "assets/cave.json");
         this.load.tilemapTiledJSON("caveClosed", "assets/caveClosed.json");
-        
+        this.load.tilemapTiledJSON("start", "assets/start.json");
+        this.load.tilemapTiledJSON("howToPlay", "assets/howToPlay.json");
     }
 
     create(){
@@ -75,7 +77,7 @@ class PlayGame extends Phaser.Scene{
 
         //create map
 
-        this.setMap("caveClosed")
+        this.setMap(this.currentMapName)
         
         /*
         const map = this.make.tilemap({key: "caveClosed"});
@@ -102,11 +104,10 @@ class PlayGame extends Phaser.Scene{
         
         //create enemies
         this.enemies = this.physics.add.group();
-        for (let i = 0; i < 2; i++) {
-            let enemy = new Enemy(this, Phaser.Math.Between(0, game.config.width), Phaser.Math.Between(0, game.config.height)); // Adjust position as needed
-            this.enemies.add(enemy);
-        }
-
+        
+        
+      
+        
         // Add collider between the player and each enemy
        
         
@@ -200,11 +201,37 @@ class PlayGame extends Phaser.Scene{
             }
         }
         
-        if(this.enemies.getChildren().length === 0 && !this.mapChanged){
-            this.setMap("cave");
-            this.mapChanged = true; // Step 3: Set the flag to true after changing the map
-            console.log("map changed");
+        if(this.enemies.getChildren().length === 0){
+            this.roomCleared = true
         }
+
+        if(this.gameStarted && this.roomCleared == true){
+            this.setMap("cave");
+             
+        }
+        
+        if(this.isPlayerOutsideMap() == "left" && this.currentMapName == "start"){
+            this.currentMapName = "howToPlay";
+            this.setMap(this.currentMapName);          
+        }
+
+    
+        if(this.isPlayerOutsideMap() == "right" && this.currentMapName == "howToPlay"){
+            this.currentMapName = "start";
+            this.setMap(this.currentMapName);        
+        }
+
+
+        if(this.isPlayerOutsideMap() == "right" && this.currentMapName == "start"){
+            this.roomCleared = false;
+            this.currentMapName = "caveClosed";
+            this.gameStarted = true;
+            this.setMap(this.currentMapName); 
+            
+           
+            
+        }
+
     }    
 
     shootBullet(x, y){
@@ -283,25 +310,60 @@ class PlayGame extends Phaser.Scene{
         this.layer.setCollisionByExclusion([-1], false);
         }
 
-        const newMapKey = mapKey; // Assuming you want to change to the "cave" map
+        const newMapKey = mapKey;
         this.map = this.make.tilemap({key: newMapKey});
         const tileset = this.map.addTilesetImage(newMapKey, "map");
        
         this.layer = this.map.createLayer("Tile Layer "+ mapKey, tileset, 0, 0);
+        
+        
         this.layer.setCollisionByProperty({collides: true});
 
         const offsetX = (this.game.config.width - this.map.widthInPixels) / 2;
         const offsetY = (this.game.config.height - this.map.heightInPixels) / 2; 
         this.layer.setPosition(offsetX, offsetY);
         
-        // Adjust player and other game objects as needed for the new map
-        // For example, reposition the player
-
+        
         if(this.dude){
             this.dude.setDepth(this.layer.depth + 1);
+            this.dude.x = game.config.width / 2;
+            this.dude.y =  game.config.height / 2;
         }
         if(this.dude && this.layer){
             this.physics.add.collider(this.dude, this.layer);
+        }
+        if(this.dude && this.currentMapName == "howToPlay"){
+            this.dude.x = game.config.width / 1.1;
+            this.dude.y =  game.config.height / 2;
+        }
+        
+
+        if(this.gameStarted && this.roomCleared == true && this.isPlayerOutsideMap() != "inside"){
+            for (let i = 0; i < 2; i++) {
+                let enemy = new Enemy(this, Phaser.Math.Between(0, game.config.width), Phaser.Math.Between(0, game.config.height)); // Adjust position as needed
+                this.enemies.add(enemy);
+            }
+            this.roomCleared = false;
+        }
+        console.log("map changed")
+    }
+
+    isPlayerOutsideMap() {
+        const playerX = this.dude.x;
+        const playerY = this.dude.y;
+        const mapWidth = this.map.widthInPixels;
+        const mapHeight = this.map.heightInPixels;
+    
+        if (playerX < 50) {
+            return "left"; 
+        } else if (playerY < 0) {
+            return "top"; 
+        } else if (playerX > mapWidth + 10) {
+            return "right"; 
+        } else if (playerY > mapHeight) {
+            return "bottom"; 
+        } else {
+            return "inside"; 
         }
     }
 }
