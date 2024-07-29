@@ -106,7 +106,7 @@ class BossEnemy extends Enemy {
         super(scene, x, y);
         this.health = 1000;
         this.speed = 2;
-        this.stepDelay = 3000;
+        this.stepDelay = 1000;
         this.defaultTint = 0xcccccc;
         this.setTint(this.defaultTint);
         this.setScale(2);

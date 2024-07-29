@@ -30,7 +30,7 @@ window.onload = function() {
             default: 'arcade',
             arcade: {
                 gravity: {y: 0},
-                debug: true
+                //debug: true
             }
         },
         pixelArt: true,
@@ -108,8 +108,46 @@ class PlayGame extends Phaser.Scene{
         this.dude.body.drag.set(1000);
         this.physics.add.collider(this.dude, this.layer);
         this.dude.dudeHealth = gameOptions.dudeHealth;
+        this.dude.setDepth(2000);
+        this.dude.setScale(1.2);
         
         
+        //create animations for the player
+        this.anims.create({
+            key: "left",
+            frames: this.anims.generateFrameNumbers("dude", {start: 0, end: 1}),
+            frameRate: 10,
+            repeat: -1
+        })
+        this.anims.create({
+            key: "up",
+            frames: this.anims.generateFrameNumbers("dude", {start: 5, end: 6}),
+            frameRate: 10,
+            repeat: -1
+        })
+        this.anims.create({
+            key: "down",
+            frames: this.anims.generateFrameNumbers("dude", {start: 2, end: 3}),
+            frameRate: 10,
+            repeat: -1
+        })
+        this.anims.create({
+            key: "stand",
+            frames: [{key: "dude", frame: 4}],
+            frameRate: 10,
+        })
+
+        this.anims.create({
+            key: "right",
+            frames: this.anims.generateFrameNumbers("dude", {start: 7, end: 9}),
+            frameRate: 10,
+            repeat: -1
+        })
+  
+
+
+
+
         //create enemies
         this.enemies = this.physics.add.group({classType: Enemy});
         this.physics.add.collider(this.enemies, this.enemies);
@@ -176,15 +214,28 @@ class PlayGame extends Phaser.Scene{
         if(!this.isKnocked){
             if(this.keys.left.isDown){
                 this.dude.body.setVelocityX(-gameOptions.dudeSpeed);
+                this.dude.anims.play("left", true)
+                
             } else if(this.keys.right.isDown){
                 this.dude.body.setVelocityX(gameOptions.dudeSpeed);
+                this.dude.anims.play("right", true)
             }
             if(this.keys.up.isDown){
                 this.dude.body.setVelocityY(-gameOptions.dudeSpeed);
-            } else if(this.keys.down.isDown){
+                if(this.dude.anims.currentAnim.key != "left" || this.dude.anims.currentAnim.key != "right"){
+                    this.dude.anims.play("up", true)
+                }
+               
+            }else if(this.keys.down.isDown){
                 this.dude.body.setVelocityY(gameOptions.dudeSpeed);
+                if(this.dude.anims.currentAnim.key != "left" || this.dude.anims.currentAnim.key != "right"){
+                    this.dude.anims.play("down", true)
+            }}
+            
+            if(this.keys.up.isUp && this.keys.down.isUp && this.keys.left.isUp && this.keys.right.isUp){
+                this.dude.anims.play("stand");
             }
-    
+
         }
         
         //shooting
@@ -215,18 +266,21 @@ class PlayGame extends Phaser.Scene{
         
         if(this.isPlayerOutsideMap() == "left" && this.currentMapName == "start"){
             this.currentMapName = "howToPlay";
+            this.gameUI.hideGameOver();
             this.setMap(this.currentMapName);          
         }
 
     
-        if(this.isPlayerOutsideMap() == "right" && this.currentMapName == "howToPlay"){
+        if(this.isPlayerOutsideMap() != "inside" && this.currentMapName == "howToPlay"){
             this.currentMapName = "start";
-            this.setMap(this.currentMapName);        
+            this.setMap(this.currentMapName);
+            this.dude.x = (game.config.width - this.dude.x) * 1.7;  
         }
 
         if(this.isPlayerOutsideMap() == "right" && this.currentMapName == "start"){
             this.currentMapName = "caveClosed";
             this.gameStarted = true;
+            this.gameUI.hideGameOver();
             this.gameUI.showHealthScore();
             this.setMap(this.currentMapName);          
         }
@@ -245,6 +299,8 @@ class PlayGame extends Phaser.Scene{
             bullet.body.enable = true;
             bullet.setActive(true);
             bullet.setVisible(true);
+
+        
             
             const hitboxRadius = 10; 
             bullet.body.setCircle(hitboxRadius);
@@ -252,7 +308,7 @@ class PlayGame extends Phaser.Scene{
             const offsetX = 2; // Adjust as necessary
             const offsetY = 3; // Adjust as necessary
             bullet.body.setOffset(offsetX, offsetY);
-
+            bullet.setScale(0.8);
 
             const spreadX = Phaser.Math.FloatBetween(-gameOptions.bulletSpread, gameOptions.bulletSpread);
             const spreadY = Phaser.Math.FloatBetween(-gameOptions.bulletSpread, gameOptions.bulletSpread);
@@ -393,7 +449,7 @@ class PlayGame extends Phaser.Scene{
                 this.enemies.add(enemy3);
            
             }else{
-                for (let i = 0; i < this.rounds + 1; i++) {
+                for (let i = 0; i < this.rounds + 2; i++) {
                     let enemyType = Phaser.Math.Between(0, 2); 
                       
                     switch(enemyType) {
@@ -410,7 +466,7 @@ class PlayGame extends Phaser.Scene{
                     
                     this.enemies.add(enemy);
                 }
-                if(this.rounds % 3 === 0){
+                if(this.rounds % 5 === 0){
                     boss = new BossEnemy(this, Phaser.Math.Between(0, game.config.width), Phaser.Math.Between(0, game.config.height),this.dude.x, this.dude.y);
                     this.enemies.add(boss);
                 }
@@ -472,8 +528,8 @@ class PlayGame extends Phaser.Scene{
         this.gameUI.updateRounds(this.rounds);
         
         this.gameUI.hideHealthScore();
-
-        
+        this.gameUI.showGameOver(this.rounds);
+        this.dude.setDepth(2000)
 
         this.rounds = 0;
         this.gameUI.updateRounds(this.rounds);
